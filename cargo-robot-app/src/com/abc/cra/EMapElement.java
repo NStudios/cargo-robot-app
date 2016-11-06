@@ -9,6 +9,6 @@ package com.abc.cra;
  * @email nikigeorgiev2000@gmail.com
  *
  */
-public enum EMapElements {
-
+public enum EMapElement {
+	WALL, EMPTY_SPACE
 }

@@ -3,6 +3,7 @@
  */
 package com.abc.cra;
 
+import java.awt.Dimension;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -15,49 +16,88 @@ import java.util.List;
  */
 public class PathFinder {
 
-	public String findOptimalPath(String map) {
-		convertStringToArray(map);
+	private char[] rawMap;
+	private List<Integer> xDimList;
 
+	public PathFinder() {
+		this.xDimList = new LinkedList<Integer>();
+	}
+
+	public char[] findOptimalPath(char[] map) {
+		char[][] mapArray = convertStringToArray(map);
+		
 		return null;
 	}
 
-	private void convertStringToArray(String map) {
-		int stringLengh = map.length();
-		char[] mapArray = new char[stringLengh];
+	private char[][] convertStringToArray(char[] mapArray) {
 
-		convertTo2D(mapArray);
+		int xDim = findXdim(mapArray);
+		int yDim = findYdim(mapArray, xDim);
+
+		Dimension arrayDim = new Dimension(xDim, yDim);
+		System.out.println(arrayDim.toString());
+
+		return fillMapArray(arrayDim);
 	}
 
-	private void convertTo2D(char[] mapArray) {
-		int xDim = findXdim(mapArray);
+	private char[][] fillMapArray(Dimension dim) {
+		int xLenght = dim.width;
+		int yLenght = dim.height;
 
+		char[][] newMapArray = new char[xLenght][yLenght];
+
+		for (int j = 0; j < yLenght; j++) {
+			for (int i = 0; i < xLenght; i++) {
+				int n = (j * xLenght) + i;
+				System.out.print(this.rawMap[n]);
+				newMapArray[i][j] = this.rawMap[n];
+			}
+			System.out.println("");
+		}
+
+		return newMapArray;
 	}
 
 	private int findXdim(char[] mapArray) {
-		int xDim = 0;
-		double mapLenth = (double) mapArray.length;
-		double sqrt = Math.sqrt(mapLenth);
-		int theoriticXdim = (int) Math.round(sqrt);
-		List<Integer> xDimList = new LinkedList<Integer>();
+		int result = 0;
+		int xDimTmp = 0;
+		int tmpI = 0;
+		char[] newMapArray = new char[mapArray.length];
 
 		// Find actual x dimension of this 2D array
 		for (int i = 0; i < mapArray.length; i++) {
 			char c = mapArray[i];
 
-			if (c == 0xA) { // byte 0xA == the new line characters.
-				xDimList.add(new Integer(xDim));
-				xDim = 0;
+			if (c == '\n') { // byte 0xA == the new line characters.
+				this.xDimList.add(new Integer(xDimTmp));
+				xDimTmp = 0;
+			} else {
+				newMapArray[tmpI] = mapArray[i];
+				tmpI++;
 			}
-			xDim++;
+			
+			xDimTmp++;
 		}
-
-		int x = 0;
-		for (Iterator<Integer> it = xDimList.iterator(); it.hasNext();) {
+		result = xDimTmp;
+		
+		for (Iterator<Integer> it = this.xDimList.iterator(); it.hasNext();) {
 			Integer intgr = (Integer) it.next();
 			int tmpVar = intgr.intValue();
-			
+			result = Math.round((result + tmpVar) / 2);
 		}
 
-		return xDim;
+		this.rawMap = new char[tmpI];
+		for (int i = 0; i < this.rawMap.length; i++) {
+			this.rawMap[i] = newMapArray[i];
+		}
+		
+		return result;
+	}
+
+	private int findYdim(char[] mapArray, int xDim) {
+		int mapLenth = mapArray.length;
+		int yDim = Math.floorDiv(mapLenth, xDim);
+
+		return yDim;
 	}
 }

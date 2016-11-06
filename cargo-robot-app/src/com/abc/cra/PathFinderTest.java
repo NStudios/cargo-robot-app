@@ -10,18 +10,20 @@ package com.abc.cra;
 public class PathFinderTest {
 
 	/**
-	 * 
-	 */
-	public PathFinderTest() {
-		// TODO Auto-generated constructor stub
-	}
-
-	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
+		PathFinder pathFinder = new PathFinder();
+		char[] map = new char[] { 
+				'#', '#', '#', '.', '#', '#', '#', '#', '\n',
+				'#', '.', '.', '.', '#', '#', '#', '#', '\n', 
+				'#', '.', '#', '#', '.', '.', '.', '#', '\n', 
+				'#', '.', '#', '#', '.', '#', '.', '#', '\n', 
+				'#', '.', '.', '.', '.', '#', '.', '#', '\n',
+				'#', '#', '#', '#', '#', '#', '.', '#', '\n' 
+		};
+
+		pathFinder.findOptimalPath(map);
 
 	}
-
 }

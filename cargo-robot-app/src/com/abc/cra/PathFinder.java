@@ -6,15 +6,12 @@ package com.abc.cra;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 
 /**
  * @author Nikola Georgiev
@@ -35,6 +32,10 @@ public class PathFinder {
 		this.allPosiblePaths = new HashMap<String, List<List<Point>>>();
 	}
 
+	/**
+	 * @param map
+	 * @return char[]
+	 */
 	public char[] findOptimalPath(char[] map) {
 		char[][] mapArray = convertStringToArray(map);
 
@@ -56,12 +57,16 @@ public class PathFinder {
 		return null;
 	}
 
+	/**
+	 * @param mapArray
+	 * @return Integer
+	 */
 	private Integer findEntrance(char[][] mapArray) {
 		for (int i = 0; i < mapArray[0].length; i++) {
 			if (mapArray[i][0] == Map.EMPTY_SPACE) {
 				Integer entranceElement = new Integer(i + 1);
 
-				System.out.println("Entry element is: " + entranceElement);
+				System.out.println("Entry element is: " + entranceElement + "X0");
 
 				return entranceElement;
 			}
@@ -71,8 +76,13 @@ public class PathFinder {
 		return null;
 	}
 
+	/**
+	 * @param entrance
+	 * @param mapArray
+	 * @return char[]
+	 */
 	private char[] findShortestPath(Integer entrance, char[][] mapArray) {
-		Point entrancePoint = new Point(entrance.intValue(), 0);
+		Point entrancePoint = new Point((entrance.intValue() - 1), 0);
 		boolean hasExit = false;
 
 		// Get entry point in the map, get direction, and GO traveling.
@@ -128,6 +138,11 @@ public class PathFinder {
 		return null;
 	}
 
+	/**
+	 * @param startPoint
+	 * @param path
+	 * @param lastDirection
+	 */
 	private void travelThroughMap(Point startPoint, List<Point> path,
 			int lastDirection) {
 		try {
@@ -145,6 +160,11 @@ public class PathFinder {
 		}
 	}
 
+	/**
+	 * @param point
+	 * @param path
+	 * @param lastDirection
+	 */
 	protected void moveOnMap(Point point, List<Point> path, int lastDirection) {
 		int exitRow = this.storage.getStorageMap().length;
 		boolean hasOptions = true;
@@ -152,11 +172,13 @@ public class PathFinder {
 
 		String key;
 		List<Point> alreadyDrovePath = path;
-		Point startPoint = point; // We need to use a temporal variable
+		Point startPoint = new Point(point); // We need to use a temporal variable
 
+		System.out.print("Curiousity path: ");
+		
 		// Move through the map till there is a way to make step forward or
 		// found the exit
-		while (hasOptions || !isGone) {
+		while (hasOptions && !isGone) {
 			// Make step forward and get the new possible point to move on.
 			Point newPoint = makeStep(startPoint, alreadyDrovePath,
 					lastDirection);
@@ -168,8 +190,10 @@ public class PathFinder {
 				isGone = true;
 			}
 			startPoint = newPoint;
+			System.out.print((newPoint.x + 1) + "X" + (newPoint.y + 1) + ",");
 		}
-
+		System.out.println("");
+		
 		// Create list with 2 elements: String whether it's a successful or
 		// unsuccessful path to the exit; and List of all points of this path.
 		if (isGone) {
@@ -194,6 +218,12 @@ public class PathFinder {
 		}
 	}
 
+	/**
+	 * @param element
+	 * @param adp
+	 * @param lastDirection
+	 * @return Point
+	 */
 	private Point makeStep(Point element, List<Point> adp, int lastDirection) {
 		Point currentPoint = new Point(element.x, element.y);
 		boolean hasAnotherOption = false;
@@ -227,7 +257,7 @@ public class PathFinder {
 			// Check if there is a way to move DOWN.
 			case Map.GO_UP:
 				// Get the next possible point above the current one.
-				newPoint = new Point(currentPoint.x, (element.y + 1));
+				newPoint = new Point(currentPoint.x, (element.y - 1));
 				break;
 
 			default:
@@ -282,10 +312,17 @@ public class PathFinder {
 	 */
 	private boolean engageCuriousity(int lastDirection, char[][] map,
 			int currentDirection, Point point) {
-		char fieldContent = map[point.x][point.y]; // Extract field's content
+		char fieldContent = Map.WALL;
+		try {
+			fieldContent = map[point.x][point.y];
+		} catch (IndexOutOfBoundsException ioobe) {
+			// DO NOTHING.
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
-		if (lastDirection != currentDirection // If so, no need to check it
-				&& fieldContent == Map.EMPTY_SPACE) { // If empty space, then go
+		//  // If so, no need to check it
+		if (lastDirection != currentDirection && fieldContent == Map.EMPTY_SPACE) { // If empty space, then go
 
 			// Trigger flag that there is a possible point to move.
 			return true;
@@ -308,6 +345,10 @@ public class PathFinder {
 		travelThroughMap(p, l, dir);
 	}
 
+	/**
+	 * @param mapArray
+	 * @return char[][]
+	 */
 	private char[][] convertStringToArray(char[] mapArray) {
 
 		int xDim = findXdim(mapArray);
@@ -319,6 +360,10 @@ public class PathFinder {
 		return fillMapArray(arrayDim);
 	}
 
+	/**
+	 * @param dim
+	 * @return char[][]
+	 */
 	private char[][] fillMapArray(Dimension dim) {
 		int xLenght = dim.width;
 		int yLenght = dim.height;
@@ -337,6 +382,10 @@ public class PathFinder {
 		return newMapArray;
 	}
 
+	/**
+	 * @param mapArray
+	 * @return int
+	 */
 	private int findXdim(char[] mapArray) {
 		int result = 0;
 		int xDimTmp = 0;
@@ -373,6 +422,11 @@ public class PathFinder {
 		return result;
 	}
 
+	/**
+	 * @param mapArray
+	 * @param xDim
+	 * @return int
+	 */
 	private int findYdim(char[] mapArray, int xDim) {
 		int mapLenth = mapArray.length;
 		int yDim = Math.floorDiv(mapLenth, xDim);

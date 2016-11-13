@@ -16,6 +16,7 @@ public class Map {
 	public static final int GO_LEFT = -1;
 	public static final int GO_DOWN = 0;
 	public static final int GO_RIGHT = 1;
+	public static final int GO_UP = 2;
 	
 	char[][] storageMap;
 

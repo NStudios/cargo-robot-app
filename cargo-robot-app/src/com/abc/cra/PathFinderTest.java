@@ -4,7 +4,9 @@
 package com.abc.cra;
 
 /**
- * @author ANDROID
+ * @author Nikola Georgiev
+ * 
+ * @email nikigeorgiev2000@gmail.com
  *
  */
 public class PathFinderTest {

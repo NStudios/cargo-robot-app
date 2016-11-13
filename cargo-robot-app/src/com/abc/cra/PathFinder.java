@@ -5,9 +5,16 @@ package com.abc.cra;
 
 import java.awt.Dimension;
 import java.awt.Point;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author Nikola Georgiev
@@ -20,12 +27,12 @@ public class PathFinder {
 	private char[] rawMap;
 	private Map storage;
 	private List<Integer> xDimList;
-	private List<Point[]> allPosiblePathslist;
+	private java.util.Map<String, List<List<Point>>> allPosiblePaths;
 
 	public PathFinder() {
 		this.storage = new Map();
 		this.xDimList = new LinkedList<Integer>();
-		this.allPosiblePathslist = new LinkedList<Point[]>();
+		this.allPosiblePaths = new HashMap<String, List<List<Point>>>();
 	}
 
 	public char[] findOptimalPath(char[] map) {
@@ -43,7 +50,7 @@ public class PathFinder {
 		}
 
 		if (entrance != null) {
-			return findShortestPath(entrance);
+			return findShortestPath(entrance, mapArray);
 		}
 
 		return null;
@@ -54,7 +61,7 @@ public class PathFinder {
 			if (mapArray[i][0] == Map.EMPTY_SPACE) {
 				Integer entranceElement = new Integer(i + 1);
 
-				System.out.println("Entrance is element: " + entranceElement);
+				System.out.println("Entry element is: " + entranceElement);
 
 				return entranceElement;
 			}
@@ -64,91 +71,241 @@ public class PathFinder {
 		return null;
 	}
 
-	private char[] findShortestPath(Integer entrance) {
+	private char[] findShortestPath(Integer entrance, char[][] mapArray) {
 		Point entrancePoint = new Point(entrance.intValue(), 0);
+		boolean hasExit = false;
 
+		// Get entry point in the map, get direction, and GO traveling.
 		travelThroughMap(entrancePoint, new LinkedList<Point>(), Map.GO_DOWN);
 
+		// Check the set for a successful scenario.
+		if (this.allPosiblePaths != null) {
+			if (!this.allPosiblePaths.isEmpty()) {
+
+				hasExit = this.allPosiblePaths.containsKey("successfull"
+						.toLowerCase());
+			}
+		}
+
+		if (hasExit) {
+			if (this.allPosiblePaths != null) {
+				if (!this.allPosiblePaths.isEmpty()) {
+					List<List<Point>> list = this.allPosiblePaths
+							.get("successful");
+
+					// Sort the list to get the shortest path.
+					Collections.sort(list, new Comparator<List>() {
+						public int compare(List list1, List list2) {
+							return Integer.valueOf(list1.size()).compareTo(
+									Integer.valueOf(list2.size()));
+						}
+					});
+
+					// For sure will be the shortest.
+					List<Point> shortestPath = list.get(0);
+
+					char[][] resultMap = mergePathWithMap(shortestPath,
+							mapArray);
+
+					System.out.println("Exit");
+
+					return convertArrayToString(resultMap);
+				}
+			}
+		}
+
+		return null; // TODO
+	}
+
+	private char[] convertArrayToString(char[][] resultMap) {
+		// TODO Auto-generated method stub
 		return null;
 	}
 
-	private void travelThroughMap(Point startPoint, List<Point> path, int lastDirection) {
-		Runnable runn = new Runnable() {
-			@Override
-			public void run() {
-				moveOnMap(startPoint, path, lastDirection);
-			}
-		};
-		Thread t = new Thread(runn);
-		t.start();
+	private char[][] mergePathWithMap(List<Point> shortestPath,
+			char[][] mapArray) {
+		// TODO
+		return null;
+	}
+
+	private void travelThroughMap(Point startPoint, List<Point> path,
+			int lastDirection) {
+		try {
+			// Create thread that will try to find a path through the labyrinth.
+			Thread pf = new Thread(new Runnable() {
+				@Override
+				public void run() {
+					moveOnMap(startPoint, path, lastDirection);
+				}
+			});
+			pf.start();
+			pf.join();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	protected void moveOnMap(Point point, List<Point> path, int lastDirection) {
 		int exitRow = this.storage.getStorageMap().length;
 		boolean hasOptions = true;
 		boolean isGone = false;
-		List<Point> alreadyDrovePath = path;
-		Point startPoint = point;
 
+		String key;
+		List<Point> alreadyDrovePath = path;
+		Point startPoint = point; // We need to use a temporal variable
+
+		// Move through the map till there is a way to make step forward or
+		// found the exit
 		while (hasOptions || !isGone) {
-			Point p = makeStep(startPoint, alreadyDrovePath, lastDirection);
-			if (p.equals(startPoint)) {
+			// Make step forward and get the new possible point to move on.
+			Point newPoint = makeStep(startPoint, alreadyDrovePath,
+					lastDirection);
+
+			if (newPoint.equals(startPoint)) {
 				hasOptions = false;
 			}
-			if (p.y == exitRow) {
+			if (newPoint.y == exitRow) {
 				isGone = true;
 			}
-			startPoint = p;
+			startPoint = newPoint;
+		}
+
+		// Create list with 2 elements: String whether it's a successful or
+		// unsuccessful path to the exit; and List of all points of this path.
+		if (isGone) {
+			key = "successful";
+		} else {
+			key = "unsuccessful";
+		}
+
+		if (this.allPosiblePaths != null) {
+			if (this.allPosiblePaths.isEmpty()) {
+				// In case there's no List in the map under this key.
+				this.allPosiblePaths.putIfAbsent(key,
+						new ArrayList<List<Point>>());
+
+				// Get the list with paths under this key and add current path.
+				List<List<Point>> l = this.allPosiblePaths.get(key);
+				l.add((List<Point>) alreadyDrovePath);
+
+				// Put the list with paths back to the map
+				this.allPosiblePaths.replace(key, l);
+			}
 		}
 	}
 
 	private Point makeStep(Point element, List<Point> adp, int lastDirection) {
-		boolean hasOption = false;
+		Point currentPoint = new Point(element.x, element.y);
+		boolean hasAnotherOption = false;
+		int[] possibleDirArray = new int[] { Map.GO_LEFT, Map.GO_DOWN,
+				Map.GO_RIGHT, Map.GO_UP };
+
+		// Check if can make a step in the all possible directions.
+		for (int i = 0; i < possibleDirArray.length; i++) {
+			Point newPoint = currentPoint; // Just to has a value;
+			int newDir = possibleDirArray[i];
+
+			switch (newDir) {
+			// Check if there is a way to move LEFT
+			case Map.GO_LEFT:
+				// Get the next possible point in left of the current one.
+				newPoint = new Point((currentPoint.x - 1), element.y);
+				break;
+
+			// Check if there is a way to move DOWN.
+			case Map.GO_DOWN:
+				// Get the next possible point under the current one.
+				newPoint = new Point(currentPoint.x, (element.y + 1));
+				break;
+
+			// Check if there is a way to move RIGHT
+			case Map.GO_RIGHT:
+				// Get the next possible point in right of the current one.
+				newPoint = new Point((currentPoint.x + 1), element.y);
+				break;
+
+			// Check if there is a way to move DOWN.
+			case Map.GO_UP:
+				// Get the next possible point above the current one.
+				newPoint = new Point(currentPoint.x, (element.y + 1));
+				break;
+
+			default:
+				break;
+			}
+
+			currentPoint = lookAround(adp, lastDirection, currentPoint,
+					hasAnotherOption, newDir, newPoint);
+		}
+
+		// If there is ONLY one option, return the point as a result.
+		// If no options, return the current point to notify for the end of the
+		// current path.
+		return currentPoint;
+	}
+
+	/**
+	 * @param adp
+	 * @param lastDirection
+	 * @param newPoint
+	 * @param hasAnotherOption
+	 * @param dir
+	 * @param point
+	 * @return
+	 */
+	private Point lookAround(List<Point> adp, int lastDirection,
+			Point newPoint, boolean hasAnotherOption, int dir, Point point) {
 		char[][] map = this.storage.getStorageMap();
-		Point newPoint = new Point(element.x, element.y);
 
-		if (lastDirection != Map.GO_LEFT
-				&& map[newPoint.x - 1][element.y] == Map.EMPTY_SPACE) {
-			hasOption = true;
-			Point p = new Point((newPoint.x - 1), element.y);
-			newPoint = p;
-		}
-		if (map[newPoint.x][element.y + 1] == Map.EMPTY_SPACE) {
-			Point p = new Point(newPoint.x, (element.y + 1));
-			
-			if (hasOption) {
-				List<Point> l = new LinkedList<Point>();
-				for (Iterator<Point> it = adp.iterator(); it.hasNext();) {
-					Point point = (Point) it.next();
-					l.add(point);
-				}
-				
-				travelThroughMap(p, l, Map.GO_DOWN);
-			} else {
-				hasOption = true;
-				newPoint = p;
-			}
-		}
-		if (lastDirection != Map.GO_RIGHT
-				&& map[newPoint.x + 1][element.y] == Map.EMPTY_SPACE) {
-			Point p = new Point((newPoint.x + 1), (element.y));
-			
-			if (hasOption) {
-				List<Point> l = new LinkedList<Point>();
-				for (Iterator<Point> it = adp.iterator(); it.hasNext();) {
-					Point point = (Point) it.next();
-					l.add(point);
-				}
-				
-				travelThroughMap(p, l, Map.GO_RIGHT);
-			} else {
-				hasOption = true;
-				newPoint = p;
+		boolean hasAnotherWay = engageCuriousity(lastDirection, map, dir, point);
+
+		if (hasAnotherWay) {
+			if (hasAnotherOption) {
+				// If already has another possible way, then get the current
+				// path and create another thread that will look for the right
+				// way.
+				createCloning(adp, point, dir);
 			}
 
+			newPoint = point;
+			// Trigger flag that there is a possible point to move.
+			hasAnotherOption = true;
 		}
-
 		return newPoint;
+	}
+
+	/**
+	 * @param lastDirection
+	 * @param map
+	 * @param currentDirection
+	 * @param point
+	 */
+	private boolean engageCuriousity(int lastDirection, char[][] map,
+			int currentDirection, Point point) {
+		char fieldContent = map[point.x][point.y]; // Extract field's content
+
+		if (lastDirection != currentDirection // If so, no need to check it
+				&& fieldContent == Map.EMPTY_SPACE) { // If empty space, then go
+
+			// Trigger flag that there is a possible point to move.
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * @param adp
+	 * @param p
+	 */
+	private void createCloning(List<Point> adp, Point p, int dir) {
+		List<Point> l = new LinkedList<Point>();
+		for (Iterator<Point> it = adp.iterator(); it.hasNext();) {
+			Point point = it.next();
+			l.add(point);
+		}
+
+		travelThroughMap(p, l, dir);
 	}
 
 	private char[][] convertStringToArray(char[] mapArray) {
@@ -203,7 +360,7 @@ public class PathFinder {
 		result = xDimTmp;
 
 		for (Iterator<Integer> it = this.xDimList.iterator(); it.hasNext();) {
-			Integer intgr = (Integer) it.next();
+			Integer intgr = it.next();
 			int tmpVar = intgr.intValue();
 			result = Math.round((result + tmpVar) / 2);
 		}

@@ -64,9 +64,10 @@ public class PathFinder {
 	private Integer findEntrance(char[][] mapArray) {
 		for (int i = 0; i < mapArray[0].length; i++) {
 			if (mapArray[i][0] == Map.EMPTY_SPACE) {
-				Integer entranceElement = new Integer(i + 1);
+				Integer entranceElement = new Integer(i);
 
-				System.out.println("Entry element is: " + entranceElement + "X0");
+				System.out.println("Entry element is: " + (entranceElement + 1)
+						+ "X1");
 
 				return entranceElement;
 			}
@@ -82,7 +83,7 @@ public class PathFinder {
 	 * @return char[]
 	 */
 	private char[] findShortestPath(Integer entrance, char[][] mapArray) {
-		Point entrancePoint = new Point((entrance.intValue() - 1), 0);
+		Point entrancePoint = new Point(entrance.intValue(), 0);
 		boolean hasExit = false;
 
 		// Get entry point in the map, get direction, and GO traveling.
@@ -172,28 +173,45 @@ public class PathFinder {
 
 		String key;
 		List<Point> alreadyDrovePath = path;
-		Point startPoint = new Point(point); // We need to use a temporal variable
+		Point startPoint = new Point(point); // We need to use a temporal
+												// variable
+		int dir = lastDirection;
 
 		System.out.print("Curiousity path: ");
-		
+
 		// Move through the map till there is a way to make step forward or
 		// found the exit
 		while (hasOptions && !isGone) {
 			// Make step forward and get the new possible point to move on.
-			Point newPoint = makeStep(startPoint, alreadyDrovePath,
-					lastDirection);
+			Point newPoint = makeStep(startPoint, alreadyDrovePath, dir);
+//			System.out.println(newPoint);
 
-			if (newPoint.equals(startPoint)) {
+			if (newPoint == null) {
 				hasOptions = false;
+			} else {
+				if (newPoint.x == (startPoint.x - 1)) {
+					dir = Map.GO_LEFT;
+				} else if (newPoint.x == (startPoint.x + 1)) {
+					dir = Map.GO_RIGHT;
+				} else if (newPoint.y == (startPoint.y - 1)) {
+					dir = Map.GO_UP;
+				} else if (newPoint.y == (startPoint.y + 1)) {
+					dir = Map.GO_DOWN;
+				}
+//				System.out.println("New direction: " + dir);
+
+				if (newPoint.y == exitRow) {
+					isGone = true;
+				}
+
+				startPoint = new Point(newPoint);
+
+				System.out.print((startPoint.x + 1) + "X" + (startPoint.y + 1)
+						+ ",");
 			}
-			if (newPoint.y == exitRow) {
-				isGone = true;
-			}
-			startPoint = newPoint;
-			System.out.print((newPoint.x + 1) + "X" + (newPoint.y + 1) + ",");
 		}
 		System.out.println("");
-		
+
 		// Create list with 2 elements: String whether it's a successful or
 		// unsuccessful path to the exit; and List of all points of this path.
 		if (isGone) {
@@ -225,47 +243,81 @@ public class PathFinder {
 	 * @return Point
 	 */
 	private Point makeStep(Point element, List<Point> adp, int lastDirection) {
-		Point currentPoint = new Point(element.x, element.y);
+		Point currentPoint = null;
 		boolean hasAnotherOption = false;
 		int[] possibleDirArray = new int[] { Map.GO_LEFT, Map.GO_DOWN,
 				Map.GO_RIGHT, Map.GO_UP };
 
+		
 		// Check if can make a step in the all possible directions.
+		Point newPoint = null; 
 		for (int i = 0; i < possibleDirArray.length; i++) {
-			Point newPoint = currentPoint; // Just to has a value;
+			boolean skippedTurn = false;
 			int newDir = possibleDirArray[i];
 
 			switch (newDir) {
 			// Check if there is a way to move LEFT
 			case Map.GO_LEFT:
-				// Get the next possible point in left of the current one.
-				newPoint = new Point((currentPoint.x - 1), element.y);
+				if (lastDirection != Map.GO_RIGHT) {
+					// Get the next possible point in left of the current one.
+					newPoint = new Point((element.x - 1), element.y);
+//					System.out.print("Check left: " + newPoint + " ");
+				} else {
+					skippedTurn = true;
+				}
 				break;
 
 			// Check if there is a way to move DOWN.
 			case Map.GO_DOWN:
-				// Get the next possible point under the current one.
-				newPoint = new Point(currentPoint.x, (element.y + 1));
+				if (lastDirection != Map.GO_UP) {
+					// Get the next possible point under the current one.
+					newPoint = new Point(element.x, (element.y + 1));
+//					System.out.print("Check down: " + newPoint + " ");
+				} else {
+					skippedTurn = true;
+				}
 				break;
 
 			// Check if there is a way to move RIGHT
 			case Map.GO_RIGHT:
-				// Get the next possible point in right of the current one.
-				newPoint = new Point((currentPoint.x + 1), element.y);
+				if (lastDirection != Map.GO_LEFT) {
+					// Get the next possible point in right of the current one.
+					newPoint = new Point((element.x + 1), element.y);
+//					System.out.print("Check right: " + newPoint + " ");
+				} else {
+					skippedTurn = true;
+				}
 				break;
 
 			// Check if there is a way to move DOWN.
 			case Map.GO_UP:
-				// Get the next possible point above the current one.
-				newPoint = new Point(currentPoint.x, (element.y - 1));
+				if (lastDirection != Map.GO_DOWN) {
+					// Get the next possible point above the current one.
+					newPoint = new Point(element.x, (element.y - 1));
+//					System.out.print("Check up: " + newPoint + " ");
+				} else {
+					skippedTurn = true;
+				}
 				break;
 
 			default:
+				System.out.println("Error occured while looking around.");
 				break;
 			}
 
-			currentPoint = lookAround(adp, lastDirection, currentPoint,
-					hasAnotherOption, newDir, newPoint);
+			boolean hasWay = false;
+			if (!skippedTurn) { // Skip useless checking
+				hasWay = lookAround(adp, hasAnotherOption, newDir, newPoint);
+			}
+			
+			if (hasWay) {
+				if (!hasAnotherOption) {
+					hasAnotherOption = true;
+				}
+				currentPoint = newPoint;
+			} else {
+//				currentPoint = null;
+			}
 		}
 
 		// If there is ONLY one option, return the point as a result.
@@ -277,31 +329,31 @@ public class PathFinder {
 	/**
 	 * @param adp
 	 * @param lastDirection
-	 * @param newPoint
-	 * @param hasAnotherOption
+	 * @param currentPoint
+	 * @param hasAnotherWay
 	 * @param dir
-	 * @param point
+	 * @param newPoint
 	 * @return
 	 */
-	private Point lookAround(List<Point> adp, int lastDirection,
-			Point newPoint, boolean hasAnotherOption, int dir, Point point) {
+	private boolean lookAround(List<Point> adp, boolean hasAnotherWay, int dir,
+			Point point) {
 		char[][] map = this.storage.getStorageMap();
 
-		boolean hasAnotherWay = engageCuriousity(lastDirection, map, dir, point);
-
-		if (hasAnotherWay) {
-			if (hasAnotherOption) {
+		boolean hasFreeWay = engageCuriousity(map, point);
+//		System.out.println(hasFreeWay + " dir: " + dir);
+		if (hasFreeWay) {
+			if (hasAnotherWay) {
 				// If already has another possible way, then get the current
 				// path and create another thread that will look for the right
 				// way.
 				createCloning(adp, point, dir);
 			}
 
-			newPoint = point;
-			// Trigger flag that there is a possible point to move.
-			hasAnotherOption = true;
+			// currentPoint = new Point(newPoint);
+			// // Trigger flag that there is a possible point to move.
+			// hasAnotherOption = true;
 		}
-		return newPoint;
+		return hasFreeWay;
 	}
 
 	/**
@@ -310,8 +362,7 @@ public class PathFinder {
 	 * @param currentDirection
 	 * @param point
 	 */
-	private boolean engageCuriousity(int lastDirection, char[][] map,
-			int currentDirection, Point point) {
+	private boolean engageCuriousity(char[][] map, Point point) {
 		char fieldContent = Map.WALL;
 		try {
 			fieldContent = map[point.x][point.y];
@@ -321,8 +372,8 @@ public class PathFinder {
 			e.printStackTrace();
 		}
 
-		//  // If so, no need to check it
-		if (lastDirection != currentDirection && fieldContent == Map.EMPTY_SPACE) { // If empty space, then go
+		// // If so, no need to check it
+		if (fieldContent == Map.EMPTY_SPACE) { // If empty space, then go
 
 			// Trigger flag that there is a possible point to move.
 			return true;

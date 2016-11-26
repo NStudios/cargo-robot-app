@@ -9,19 +9,34 @@ package com.abc.cra;
  * @email nikigeorgiev2000@gmail.com
  *
  */
-public class Map {
-	
+class Map {
+
 	public static final char WALL = '#';
 	public static final char EMPTY_SPACE = '.';
+	public static final char PATH = '+';
+
 	public static final int GO_LEFT = -1;
 	public static final int GO_DOWN = 0;
 	public static final int GO_RIGHT = 1;
 	public static final int GO_UP = 2;
-	
-	char[][] storageMap;
 
-	public static EMapElement checkElement(char element) {
+	protected char[][] storageMap;
+
+	/**
+	 * @param char[][] mapArray
+	 */
+	Map(char[][] mapArray) {
+		this.storageMap = mapArray;
+	}
+
+	/**
+	 * @param char element
+	 * @return EMapElement
+	 */
+	static EMapElement checkElement(char element) {
+
 		switch (element) {
+
 		case WALL:
 			return EMapElement.WALL;
 
@@ -31,21 +46,21 @@ public class Map {
 		default:
 			break;
 		}
-		
+
 		return null;
 	}
 
 	/**
-	 * @return the storageMap
+	 * @return char[][] storageMap
 	 */
-	public char[][] getStorageMap() {
+	protected char[][] getStorageMap() {
 		return this.storageMap;
 	}
 
 	/**
-	 * @param storageMap the storageMap to set
+	 * @param char[][] storageMap the storageMap to set
 	 */
-	public void setStorageMap(char[][] storageMap) {
+	protected void setStorageMap(char[][] storageMap) {
 		this.storageMap = storageMap;
 	}
 }

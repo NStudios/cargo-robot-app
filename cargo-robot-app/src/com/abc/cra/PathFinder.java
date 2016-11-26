@@ -5,7 +5,6 @@ package com.abc.cra;
 
 import java.awt.Dimension;
 import java.awt.Point;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -21,36 +20,45 @@ import java.util.List;
  */
 public class PathFinder {
 
-	private char[] rawMap;
-	private Map storage;
-	private List<Integer> xDimList;
-	private java.util.Map<String, List<List<Point>>> allPosiblePaths;
+	private final String TAG = "PathFinder";
 
+	protected java.util.Map<String, List<List<Point>>> allPosiblePathsList;
+
+	private char[] rawMap;
+	private List<Integer> xDimList;
+	private Map storage;
+	private Curiosity curiousity;
+
+	/**
+	 * 
+	 */
 	public PathFinder() {
-		this.storage = new Map();
 		this.xDimList = new LinkedList<Integer>();
-		this.allPosiblePaths = new HashMap<String, List<List<Point>>>();
+		this.allPosiblePathsList = new HashMap<String, List<List<Point>>>();
 	}
 
 	/**
-	 * @param map
+	 * @param char[] map
 	 * @return char[]
 	 */
 	public char[] findOptimalPath(char[] map) {
 		char[][] mapArray = convertStringToArray(map);
 
-		if (this.storage != null) {
-			this.storage.setStorageMap(mapArray);
-		}
+		this.storage = new Map(mapArray);
+
+		this.curiousity = new Curiosity(this, null, null, 0, this.storage);
 
 		Integer entrance = null;
 		if (mapArray != null) {
 			entrance = findEntrance(mapArray);
 		} else {
+			DebugInfo.pln(TAG, "No Entrance.");
 			return null;
 		}
 
 		if (entrance != null) {
+			DebugInfo.pln(TAG, "Checking for available Exit.");
+
 			return findShortestPath(entrance, mapArray);
 		}
 
@@ -58,7 +66,7 @@ public class PathFinder {
 	}
 
 	/**
-	 * @param mapArray
+	 * @param char[] mapArray
 	 * @return Integer
 	 */
 	private Integer findEntrance(char[][] mapArray) {
@@ -66,8 +74,8 @@ public class PathFinder {
 			if (mapArray[i][0] == Map.EMPTY_SPACE) {
 				Integer entranceElement = new Integer(i);
 
-				System.out.println("Entry element is: " + (entranceElement + 1)
-						+ "X1");
+				String element = (entranceElement + 1) + "X1";
+				DebugInfo.pln(TAG, "Entry element is " + element);
 
 				return entranceElement;
 			}
@@ -78,326 +86,169 @@ public class PathFinder {
 	}
 
 	/**
-	 * @param entrance
-	 * @param mapArray
+	 * @param Integer
+	 *            entrance
+	 * @param char[][] mapArray
 	 * @return char[]
 	 */
+	@SuppressWarnings({ "rawtypes", "unused" })
 	private char[] findShortestPath(Integer entrance, char[][] mapArray) {
 		Point entrancePoint = new Point(entrance.intValue(), 0);
 		boolean hasExit = false;
 
 		// Get entry point in the map, get direction, and GO traveling.
-		travelThroughMap(entrancePoint, new LinkedList<Point>(), Map.GO_DOWN);
+		if (this.curiousity != null) {
+			DebugInfo.pln(TAG, "Engage Curiosity.");
+			travelThroughMap(entrancePoint, new LinkedList<Point>(),
+					Map.GO_DOWN);
+			System.out.println(); // Just to separate the lines
+		}
 
 		// Check the set for a successful scenario.
-		if (this.allPosiblePaths != null) {
-			if (!this.allPosiblePaths.isEmpty()) {
+		if (this.allPosiblePathsList != null) {
+			if (!this.allPosiblePathsList.isEmpty()) {
 
-				hasExit = this.allPosiblePaths.containsKey("successfull"
+				hasExit = this.allPosiblePathsList.containsKey("successful"
 						.toLowerCase());
+			} else {
+				DebugInfo.pln(TAG, "AllPossiblePathsList is empty.");
 			}
 		}
 
 		if (hasExit) {
-			if (this.allPosiblePaths != null) {
-				if (!this.allPosiblePaths.isEmpty()) {
-					List<List<Point>> list = this.allPosiblePaths
-							.get("successful");
+			DebugInfo.pln(TAG, "Curiousity reported - Exit Found.");
 
-					// Sort the list to get the shortest path.
-					Collections.sort(list, new Comparator<List>() {
-						public int compare(List list1, List list2) {
-							return Integer.valueOf(list1.size()).compareTo(
-									Integer.valueOf(list2.size()));
-						}
-					});
+			if (this.allPosiblePathsList != null) {
+				List<List<Point>> list = this.allPosiblePathsList
+						.get("successful");
+				if (list.isEmpty()) {
+					DebugInfo.pln(TAG, "AllSuccessfulPathsList is empty.");
+				}
 
-					// For sure will be the shortest.
+				// Sort the list to get the shortest path.
+				Collections.sort(list, new Comparator<List>() {
+					public int compare(List list1, List list2) {
+						return Integer.valueOf(list1.size()).compareTo(
+								Integer.valueOf(list2.size()));
+					}
+				});
+				// Collections.sort(list, new Comparator<List>() {
+				// public int compare(List list1, List list2) {
+				// return list2.size() - list1.size();
+				// }
+				// });
+
+				// For sure will be the shortest.
+				if (list != null) {
 					List<Point> shortestPath = list.get(0);
-
-					char[][] resultMap = mergePathWithMap(shortestPath,
-							mapArray);
-
-					System.out.println("Exit");
+					char[][] resultMap = mergeAdpWithMap(shortestPath, mapArray);
 
 					return convertArrayToString(resultMap);
+				} else {
+					DebugInfo.pln(TAG, "Successful list is null.");
 				}
+			} else {
+				DebugInfo.pln(TAG, "AllPossiblePathsList is null.");
 			}
+		} else {
+			DebugInfo.pln(TAG, "Curiosity reported - There is no exit.");
 		}
 
-		return null; // TODO
-	}
-
-	private char[] convertArrayToString(char[][] resultMap) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	private char[][] mergePathWithMap(List<Point> shortestPath,
-			char[][] mapArray) {
-		// TODO
 		return null;
 	}
 
 	/**
-	 * @param startPoint
-	 * @param path
-	 * @param lastDirection
+	 * @param Point
+	 *            startPoint
+	 * @param List
+	 *            <Point> path
+	 * @param Int
+	 *            lastDirection
 	 */
-	private void travelThroughMap(Point startPoint, List<Point> path,
+	protected void travelThroughMap(Point startPoint, List<Point> path,
 			int lastDirection) {
 		try {
 			// Create thread that will try to find a path through the labyrinth.
-			Thread pf = new Thread(new Runnable() {
-				@Override
-				public void run() {
-					moveOnMap(startPoint, path, lastDirection);
-				}
-			});
+			Thread pf = new Thread(new Curiosity(this, startPoint, path,
+					lastDirection, this.storage));
 			pf.start();
-			pf.join();
+			pf.join(); // We have to wait till the new thread has done.
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
 	/**
-	 * @param point
-	 * @param path
-	 * @param lastDirection
+	 * @param char[][] resultMap
+	 * @return char[][]
 	 */
-	protected void moveOnMap(Point point, List<Point> path, int lastDirection) {
-		int exitRow = this.storage.getStorageMap().length;
-		boolean hasOptions = true;
-		boolean isGone = false;
+	private char[] convertArrayToString(char[][] resultMap) {
+		if (resultMap != null) {
+			int rols = resultMap[0].length;
+			int colms = resultMap.length + 1; // 1 extra column for the Newline
+												// char
+			int length = rols * colms;
+			char[] rawArray = new char[length];
+			for (int i = 0; i < rols; i++) {
+				for (int j = 0; j < colms; j++) {
 
-		String key;
-		List<Point> alreadyDrovePath = path;
-		Point startPoint = new Point(point); // We need to use a temporal
-												// variable
-		int dir = lastDirection;
+					int element = (i * j) + j;
 
-		System.out.print("Curiousity path: ");
+					if (j < (colms - 1)) {
+						char content = resultMap[j][i];
+						rawArray[element] = content;
 
-		// Move through the map till there is a way to make step forward or
-		// found the exit
-		while (hasOptions && !isGone) {
-			// Make step forward and get the new possible point to move on.
-			Point newPoint = makeStep(startPoint, alreadyDrovePath, dir);
-//			System.out.println(newPoint);
-
-			if (newPoint == null) {
-				hasOptions = false;
-			} else {
-				if (newPoint.x == (startPoint.x - 1)) {
-					dir = Map.GO_LEFT;
-				} else if (newPoint.x == (startPoint.x + 1)) {
-					dir = Map.GO_RIGHT;
-				} else if (newPoint.y == (startPoint.y - 1)) {
-					dir = Map.GO_UP;
-				} else if (newPoint.y == (startPoint.y + 1)) {
-					dir = Map.GO_DOWN;
+						System.out.print(content);
+					} else {
+						rawArray[element] = '\n';
+					}
 				}
-//				System.out.println("New direction: " + dir);
-
-				if (newPoint.y == exitRow) {
-					isGone = true;
-				}
-
-				startPoint = new Point(newPoint);
-
-				System.out.print((startPoint.x + 1) + "X" + (startPoint.y + 1)
-						+ ",");
+				System.out.println();
 			}
+			return rawArray;
 		}
-		System.out.println("");
 
-		// Create list with 2 elements: String whether it's a successful or
-		// unsuccessful path to the exit; and List of all points of this path.
-		if (isGone) {
-			key = "successful";
+		return null;
+	}
+
+	/**
+	 * @param List
+	 *            <Point> shortestPath
+	 * @param char[][] mapArray
+	 * @return char[][]
+	 */
+	private char[][] mergeAdpWithMap(List<Point> shortestPath, char[][] mapArray) {
+
+		if (!shortestPath.isEmpty()) {
+
+			try { // TRY block in case the Interator return some Exception.
+
+				for (Iterator<Point> it = shortestPath.iterator(); it.hasNext();) {
+					Point point = (Point) it.next();
+					int xPosition = (int) point.getX();
+					int yPosition = (int) point.getY();
+
+					mapArray[xPosition][yPosition] = Map.PATH;
+				}
+
+				return mapArray;
+
+			} catch (Exception e) {
+				// In case of Exception, print the stack and return null.
+				e.printStackTrace();
+
+				return null;
+			}
 		} else {
-			key = "unsuccessful";
+			DebugInfo.pln(TAG, "shortestPathList is empty.");
 		}
 
-		if (this.allPosiblePaths != null) {
-			if (this.allPosiblePaths.isEmpty()) {
-				// In case there's no List in the map under this key.
-				this.allPosiblePaths.putIfAbsent(key,
-						new ArrayList<List<Point>>());
-
-				// Get the list with paths under this key and add current path.
-				List<List<Point>> l = this.allPosiblePaths.get(key);
-				l.add((List<Point>) alreadyDrovePath);
-
-				// Put the list with paths back to the map
-				this.allPosiblePaths.replace(key, l);
-			}
-		}
+		// No path, no need to merge anything. Just return null.
+		return null;
 	}
 
 	/**
-	 * @param element
-	 * @param adp
-	 * @param lastDirection
-	 * @return Point
-	 */
-	private Point makeStep(Point element, List<Point> adp, int lastDirection) {
-		Point currentPoint = null;
-		boolean hasAnotherOption = false;
-		int[] possibleDirArray = new int[] { Map.GO_LEFT, Map.GO_DOWN,
-				Map.GO_RIGHT, Map.GO_UP };
-
-		
-		// Check if can make a step in the all possible directions.
-		Point newPoint = null; 
-		for (int i = 0; i < possibleDirArray.length; i++) {
-			boolean skippedTurn = false;
-			int newDir = possibleDirArray[i];
-
-			switch (newDir) {
-			// Check if there is a way to move LEFT
-			case Map.GO_LEFT:
-				if (lastDirection != Map.GO_RIGHT) {
-					// Get the next possible point in left of the current one.
-					newPoint = new Point((element.x - 1), element.y);
-//					System.out.print("Check left: " + newPoint + " ");
-				} else {
-					skippedTurn = true;
-				}
-				break;
-
-			// Check if there is a way to move DOWN.
-			case Map.GO_DOWN:
-				if (lastDirection != Map.GO_UP) {
-					// Get the next possible point under the current one.
-					newPoint = new Point(element.x, (element.y + 1));
-//					System.out.print("Check down: " + newPoint + " ");
-				} else {
-					skippedTurn = true;
-				}
-				break;
-
-			// Check if there is a way to move RIGHT
-			case Map.GO_RIGHT:
-				if (lastDirection != Map.GO_LEFT) {
-					// Get the next possible point in right of the current one.
-					newPoint = new Point((element.x + 1), element.y);
-//					System.out.print("Check right: " + newPoint + " ");
-				} else {
-					skippedTurn = true;
-				}
-				break;
-
-			// Check if there is a way to move DOWN.
-			case Map.GO_UP:
-				if (lastDirection != Map.GO_DOWN) {
-					// Get the next possible point above the current one.
-					newPoint = new Point(element.x, (element.y - 1));
-//					System.out.print("Check up: " + newPoint + " ");
-				} else {
-					skippedTurn = true;
-				}
-				break;
-
-			default:
-				System.out.println("Error occured while looking around.");
-				break;
-			}
-
-			boolean hasWay = false;
-			if (!skippedTurn) { // Skip useless checking
-				hasWay = lookAround(adp, hasAnotherOption, newDir, newPoint);
-			}
-			
-			if (hasWay) {
-				if (!hasAnotherOption) {
-					hasAnotherOption = true;
-				}
-				currentPoint = newPoint;
-			} else {
-//				currentPoint = null;
-			}
-		}
-
-		// If there is ONLY one option, return the point as a result.
-		// If no options, return the current point to notify for the end of the
-		// current path.
-		return currentPoint;
-	}
-
-	/**
-	 * @param adp
-	 * @param lastDirection
-	 * @param currentPoint
-	 * @param hasAnotherWay
-	 * @param dir
-	 * @param newPoint
-	 * @return
-	 */
-	private boolean lookAround(List<Point> adp, boolean hasAnotherWay, int dir,
-			Point point) {
-		char[][] map = this.storage.getStorageMap();
-
-		boolean hasFreeWay = engageCuriousity(map, point);
-//		System.out.println(hasFreeWay + " dir: " + dir);
-		if (hasFreeWay) {
-			if (hasAnotherWay) {
-				// If already has another possible way, then get the current
-				// path and create another thread that will look for the right
-				// way.
-				createCloning(adp, point, dir);
-			}
-
-			// currentPoint = new Point(newPoint);
-			// // Trigger flag that there is a possible point to move.
-			// hasAnotherOption = true;
-		}
-		return hasFreeWay;
-	}
-
-	/**
-	 * @param lastDirection
-	 * @param map
-	 * @param currentDirection
-	 * @param point
-	 */
-	private boolean engageCuriousity(char[][] map, Point point) {
-		char fieldContent = Map.WALL;
-		try {
-			fieldContent = map[point.x][point.y];
-		} catch (IndexOutOfBoundsException ioobe) {
-			// DO NOTHING.
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		// // If so, no need to check it
-		if (fieldContent == Map.EMPTY_SPACE) { // If empty space, then go
-
-			// Trigger flag that there is a possible point to move.
-			return true;
-		}
-
-		return false;
-	}
-
-	/**
-	 * @param adp
-	 * @param p
-	 */
-	private void createCloning(List<Point> adp, Point p, int dir) {
-		List<Point> l = new LinkedList<Point>();
-		for (Iterator<Point> it = adp.iterator(); it.hasNext();) {
-			Point point = it.next();
-			l.add(point);
-		}
-
-		travelThroughMap(p, l, dir);
-	}
-
-	/**
-	 * @param mapArray
+	 * @param char[][] mapArray
 	 * @return char[][]
 	 */
 	private char[][] convertStringToArray(char[] mapArray) {
@@ -412,10 +263,12 @@ public class PathFinder {
 	}
 
 	/**
-	 * @param dim
+	 * @param Dimension
+	 *            dim
 	 * @return char[][]
 	 */
 	private char[][] fillMapArray(Dimension dim) {
+
 		int xLenght = dim.width;
 		int yLenght = dim.height;
 
@@ -434,10 +287,11 @@ public class PathFinder {
 	}
 
 	/**
-	 * @param mapArray
+	 * @param char[][] mapArray
 	 * @return int
 	 */
 	private int findXdim(char[] mapArray) {
+		
 		int result = 0;
 		int xDimTmp = 0;
 		int tmpI = 0;
@@ -479,9 +333,20 @@ public class PathFinder {
 	 * @return int
 	 */
 	private int findYdim(char[] mapArray, int xDim) {
+		
 		int mapLenth = mapArray.length;
 		int yDim = Math.floorDiv(mapLenth, xDim);
 
 		return yDim;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return TAG;
 	}
 }

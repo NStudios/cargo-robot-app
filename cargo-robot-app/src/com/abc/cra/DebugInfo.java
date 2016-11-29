@@ -9,7 +9,7 @@ package com.abc.cra;
  * @email nikigeorgiev2000@gmail.com
  *
  */
-public class DebugInfo {
+class DebugInfo {
 
 	/**
 	 * @param String message

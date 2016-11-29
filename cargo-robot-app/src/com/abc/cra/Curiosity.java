@@ -5,6 +5,8 @@ package com.abc.cra;
 
 import java.awt.Point;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -19,11 +21,14 @@ class Curiosity implements Runnable {
 
 	private final String TAG = "Curiosity";
 
+	private final String[] POSIBLE_DIR_ARRAY = new String[] { Map.GO_UP,
+			Map.GO_RIGHT, Map.GO_DOWN, Map.GO_LEFT };
+
 	private PathFinder context;
-	private Map storage;
+	private Map warehouse;
 	private Point startPoint;
 	private List<Point> adp;
-	private int lastDirection;
+	private String lastDirection;
 
 	/**
 	 * @param PathFinder
@@ -34,16 +39,16 @@ class Curiosity implements Runnable {
 	 *            <Point> adp
 	 * @param int lastDirection
 	 * @param Map
-	 *            mapArray
+	 *            map
 	 */
 	Curiosity(PathFinder context, Point startPoint, List<Point> adp,
-			int lastDirection, Map mapArray) {
+			String lastDirection, Map map) {
 
 		this.context = context;
 		this.startPoint = startPoint;
 		this.adp = adp;
 		this.lastDirection = lastDirection;
-		this.storage = mapArray;
+		this.warehouse = map;
 	}
 
 	/*
@@ -63,18 +68,21 @@ class Curiosity implements Runnable {
 	 */
 	private void moveOnMap() {
 
-		int exitRow = (this.storage.getStorageMap()[0].length - 1);
-		int dir = this.lastDirection;
+		int exitRow = (this.warehouse.getStorageMap()[0].length - 1);
 		boolean hasOptions = true;
 		boolean isGone = false;
 		String key = "";
+		String newDir = new String(this.lastDirection);
 
 		// We need to use temp variable.
 		Point currentPoint = new Point(this.startPoint);
 
+		// Put the start point into the already drove path list.
+		this.adp.add(currentPoint);
+
 		// Print some debug info.
 		System.out.println(); // Just separate from the last info
-		DebugInfo.p("Curiousity" + Thread.currentThread().getId() + ": ");
+		DebugInfo.p(TAG + Thread.currentThread().getId() + ": ");
 		DebugInfo.p((this.startPoint.x + 1) + "X" + (this.startPoint.y + 1)
 				+ ",");
 
@@ -83,7 +91,7 @@ class Curiosity implements Runnable {
 		while (hasOptions && !isGone) {
 
 			// Make step forward and get the new possible point to move on.
-			Point newPoint = this.makeStep(currentPoint, dir); // TODO NPE check
+			Point newPoint = this.makeStep(currentPoint, this.lastDirection); // TODO
 
 			if (newPoint == null) {
 
@@ -93,21 +101,36 @@ class Curiosity implements Runnable {
 
 				if (newPoint.x == (this.startPoint.x - 1)
 						&& newPoint.y == this.startPoint.y) {
-					dir = Map.GO_LEFT;
-				} else if (newPoint.x == (this.startPoint.x + 1)
+
+					newDir.equalsIgnoreCase(Map.GO_LEFT);
+
+				}
+				if (newPoint.x == (this.startPoint.x + 1)
 						&& newPoint.y == this.startPoint.y) {
-					dir = Map.GO_RIGHT;
-				} else if (newPoint.y == (this.startPoint.y - 1)
+
+					newDir.equalsIgnoreCase(Map.GO_RIGHT);
+
+				}
+				if (newPoint.y == (this.startPoint.y - 1)
 						&& newPoint.x == this.startPoint.x) {
-					dir = Map.GO_UP;
-				} else if (newPoint.y == (this.startPoint.y + 1)
+
+					newDir.equalsIgnoreCase(Map.GO_UP);
+
+				}
+				if (newPoint.y == (this.startPoint.y + 1)
 						&& newPoint.x == this.startPoint.x) {
-					dir = Map.GO_DOWN;
+
+					newDir.equalsIgnoreCase(Map.GO_DOWN);
+
 				}
 
-				if (newPoint.y == exitRow) {
-					isGone = true;
+				if (!this.lastDirection.equalsIgnoreCase(newDir)) {
+					this.lastDirection = new String(newDir);
+					hasOptions = false;
 				}
+
+				if (newPoint.y == exitRow)
+					isGone = true;
 
 				this.adp.add(newPoint);
 
@@ -117,30 +140,42 @@ class Curiosity implements Runnable {
 				DebugInfo.p((currentPoint.x + 1) + "X" + (currentPoint.y + 1)
 						+ ",");
 			}
+
+			try {
+				Thread.sleep(1);
+			} catch (InterruptedException ie) {
+				ie.printStackTrace();
+			}
 		}
 
 		// Create list with 2 elements: String whether it's a successful or
 		// unsuccessful path to the exit, and List of all points of this path.
 		if (isGone) {
 			key = "successful";
+
+			// Print some debug info.
+			DebugInfo.pln(TAG, "Found Exit.");
 		} else {
 			key = "unsuccessful";
+
+			// Print some debug info.
+			DebugInfo.pln(TAG, "There's NO Exit.");
 		}
 
 		if (this.context != null) {
-			if (this.context.allPosiblePathsList != null) {
+			if (this.context.allPosiblePathsMap != null) {
 
 				// In case there's no List in the map under this key.
-				this.context.allPosiblePathsList.putIfAbsent(key,
+				this.context.allPosiblePathsMap.putIfAbsent(key,
 						new ArrayList<List<Point>>());
 
 				// Get the list with paths under this key and add current
 				// path.
-				List<List<Point>> l = this.context.allPosiblePathsList.get(key);
+				List<List<Point>> l = this.context.allPosiblePathsMap.get(key);
 				l.add((List<Point>) this.adp);
 
 				// Put the list with paths back to the map.
-				this.context.allPosiblePathsList.put(key, l);
+				this.context.allPosiblePathsMap.put(key, l);
 			}
 		} else {
 			// Print some debug info.
@@ -154,96 +189,58 @@ class Curiosity implements Runnable {
 	 * @param int lastDirection
 	 * @return Point
 	 */
-	private Point makeStep(Point element, int lastDirection) {
+	private Point makeStep(Point element, String lastDir) {
 
 		Point currentPoint = null;
 		Point newPoint = null;
+		String mainDir = null; // Just for debug info.
 		boolean hasWay = false;
-		boolean hasAnotherOption = false;
+		int option = 0;
 
-		int[] posibleDirArray = new int[] { Map.GO_UP, Map.GO_RIGHT,
-				Map.GO_DOWN, Map.GO_LEFT };
+		List<String> pda = randomiseArray(POSIBLE_DIR_ARRAY);
 
 		// Check if can make a step in the all possible directions.
-		for (int i = 0; i < posibleDirArray.length; i++) {
+		for (Iterator<String> it = pda.iterator(); it.hasNext();) {
 
-			boolean skippedTurn = false;
-			int newDir = posibleDirArray[i];
+			String testDir = (String) it.next();
 
-			switch (newDir) {
-			// Check if there is a way to move LEFT.
-			case Map.GO_LEFT:
-				if (lastDirection != Map.GO_RIGHT) {
-					// Get the next possible point in left of the current one.
-					newPoint = new Point((int) (element.getX() - 1),
-							(int) element.getY());
-				} else {
-					skippedTurn = true;
-				}
-				break;
+			newPoint = getNewPoint(element, lastDir, testDir);
 
-			// Check if there is a way to move DOWN.
-			case Map.GO_DOWN:
-				if (lastDirection != Map.GO_UP) {
-					// Get the next possible point under the current one.
-					newPoint = new Point((int) element.getX(),
-							(int) (element.getY() + 1));
-				} else {
-					skippedTurn = true;
-				}
-				break;
+			// Check for already drove path. If not, go ahead.
+			boolean isSkippedTurn = lookBack(newPoint, this.adp);
 
-			// Check if there is a way to move RIGHT.
-			case Map.GO_RIGHT:
-				if (lastDirection != Map.GO_LEFT) {
-					// Get the next possible point in right of the current one.
-					newPoint = new Point((int) (element.getX() + 1),
-							(int) element.getY());
-				} else {
-					skippedTurn = true;
-				}
-				break;
-
-			// Check if there is a way to move DOWN.
-			case Map.GO_UP:
-				if (lastDirection != Map.GO_DOWN) {
-					// Get the next possible point above the current one.
-					newPoint = new Point((int) element.getX(),
-							(int) (element.getY() - 1));
-				} else {
-					skippedTurn = true;
-				}
-				break;
-
-			default:
-				// Print some debug info.
-				DebugInfo.pln(TAG, "Error occured while looking around.");
-				break;
-			}
-
-			if (lookBack(newPoint, this.adp)) {
-				skippedTurn = true;
-			}
-
-			if (!skippedTurn) { // This skips useless checking for an option.
+			if (!isSkippedTurn) {
 
 				hasWay = lookAround(newPoint);
 
 				if (hasWay) {
 
-					if (hasAnotherOption) {
+					if (0 == option) {
+
+						// The first found way will be the main way for the
+						// current Thread.
+						currentPoint = newPoint;
+						mainDir = new String(testDir);
+
+					} else if (1 <= option) {
+
+						// Print debug info.
+						DebugInfo.p(" Has Another Option ");
 
 						// If already has another possible way, then get the
 						// current path and create another thread that will look
 						// for the right way.
-						createCloning(this.adp, newPoint, newDir);
+						createCloning(this.adp, newPoint, testDir);
 
-					} else {
-						// Trigger flag that there is a possible point to move.
-						hasAnotherOption = true;
+						// Print some debug info.
+						String prevElem = (element.x + 1) + "X"
+								+ (element.y + 1);
+						DebugInfo.p("Proceed to " + mainDir + " from "
+								+ prevElem + " - ");
 					}
 
-					currentPoint = newPoint;
+					// Add flag that there is 1 more possible point to move.
+					option++;
 				}
 			}
 		}
@@ -252,6 +249,61 @@ class Curiosity implements Runnable {
 		// If no options, return the current point to notify for the end of the
 		// current path.
 		return currentPoint;
+	}
+
+	private Point getNewPoint(Point element, String lastDir, String testDir) {
+		Point newPoint = null;
+
+		// Check if there is a way to move LEFT.
+		if (testDir.equalsIgnoreCase(Map.GO_LEFT)) {
+			if (!lastDir.equalsIgnoreCase(Map.GO_RIGHT)) {
+				// Get the next possible point in left of the current one.
+				return newPoint = new Point((element.x - 1), element.y);
+			}
+		}
+
+		// Check if there is a way to move DOWN.
+		if (testDir.equalsIgnoreCase(Map.GO_DOWN)) {
+			if (!lastDir.equalsIgnoreCase(Map.GO_UP)) {
+				// Get the next possible point under the current one.
+				return newPoint = new Point(element.x, (element.y + 1));
+			}
+		}
+
+		// Check if there is a way to move RIGHT.
+		if (testDir.equalsIgnoreCase(Map.GO_RIGHT)) {
+			if (!lastDir.equalsIgnoreCase(Map.GO_LEFT)) {
+				// Get the next possible point in right of the current one.
+				return newPoint = new Point((element.x + 1), element.y);
+			}
+		}
+
+		// Check if there is a way to move DOWN.
+		if (testDir.equalsIgnoreCase(Map.GO_UP)) {
+			if (!lastDir.equalsIgnoreCase(Map.GO_DOWN)) {
+				// Get the next possible point above the current one.
+				return newPoint = new Point(element.x, (element.y - 1));
+			}
+		}
+
+		return newPoint;
+	}
+
+	/**
+	 * @param String
+	 *            [] array
+	 * @return List<String>
+	 */
+	private List<String> randomiseArray(String[] array) {
+
+		List<String> list = null;
+
+		if (array != null) {
+			list = new ArrayList<String>(Arrays.asList(array));
+			Collections.shuffle(list);
+		}
+
+		return list;
 	}
 
 	/**
@@ -267,10 +319,12 @@ class Curiosity implements Runnable {
 
 			Point point = (Point) it.next();
 
-			if (newPoint != null && point != null) {
+			try {
 				if (newPoint.equals(point)) {
 					return true;
 				}
+			} catch (NullPointerException npe) {
+				return true;
 			}
 		}
 
@@ -284,7 +338,7 @@ class Curiosity implements Runnable {
 	 */
 	private boolean lookAround(Point point) {
 
-		char[][] map = this.storage.getStorageMap();
+		char[][] map = this.warehouse.getStorageMap();
 
 		boolean hasFreeWay = engageCuriousity(map, point);
 
@@ -328,7 +382,7 @@ class Curiosity implements Runnable {
 	 *            p
 	 * @param int dir
 	 */
-	private void createCloning(List<Point> adp, Point p, int dir) {
+	private void createCloning(List<Point> adp, Point p, String dir) {
 
 		try {
 
@@ -336,12 +390,10 @@ class Curiosity implements Runnable {
 
 			// Send command to the parent PathFinder object that you want it to
 			// clone this curiosity with new parameters.
-			// new Thread(new Runnable() {
-			// @Override
-			// public void run() {
-			context.travelThroughMap(p, l, dir); // TODO Check the instance
-			// }
-			// }).start();
+			this.context.travelThroughMap(p, l, dir); // TODO Check the instance
+
+			// Print some debug info.
+			DebugInfo.p(TAG + Thread.currentThread().getId() + ": ");
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -356,20 +408,5 @@ class Curiosity implements Runnable {
 	@Override
 	public String toString() {
 		return TAG;
-	}
-
-	/**
-	 * @return Map storage
-	 */
-	protected Map getStorage() {
-		return this.storage;
-	}
-
-	/**
-	 * @param Map
-	 *            storage - the storage to set
-	 */
-	protected void setStorage(Map storage) {
-		this.storage = storage;
 	}
 }
